@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ARG Fútbol</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07101d;color:#f7fafc;font-family:Arial,system-ui,sans-serif}
+header{padding:18px;background:linear-gradient(135deg,#08783f,#10263f);position:sticky;top:0;z-index:4}
+h1{margin:0;font-size:25px}.muted{color:#9fb0c4}.live{color:#55ed98;font-weight:800}
+nav{display:flex;gap:8px;padding:10px;background:#0c1727;overflow:auto;position:sticky;top:69px;z-index:3}
+button{border:0;border-radius:10px;padding:10px 14px;background:#17253a;color:white;font-weight:700;white-space:nowrap}
+button.active{background:#35d17c;color:#062414}.wrap{max-width:900px;margin:auto;padding:14px}
+.page{display:none}.page.active{display:block}.title{font-size:19px;margin:18px 0 10px}
+.card{background:#111d2d;border:1px solid #23334a;border-radius:16px;padding:14px;margin:10px 0}
+.match{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;text-align:center;gap:8px}
+.team{font-weight:800}.crest{font-size:30px}.score{font-size:25px;font-weight:900;margin:3px}.time{font-size:12px;color:#aebdd0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:10px}.pill{padding:8px 12px;border-radius:20px;background:#17253a;cursor:pointer}.pill.sel{background:#35d17c;color:#062414}
+table{width:100%;border-collapse:collapse}td,th{padding:9px 5px;border-bottom:1px solid #26364c;text-align:left}th{color:#9fb0c4;font-size:12px}
+input{width:100%;padding:11px;border-radius:9px;border:1px solid #293a52;background:#0b1524;color:white;margin:5px 0 10px}
+.badge{display:inline-block;border-radius:20px;padding:4px 8px;background:#183c2b;color:#60eb9b;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>🇦🇷 ARG Fútbol</h1><div class="muted">Todo el fútbol argentino en un solo lugar</div></header>
+<nav>
+<button class="nav active" data-page="inicio">Inicio</button><button class="nav" data-page="partidos">Partidos</button>
+<button class="nav" data-page="tabla">Tabla</button><button class="nav" data-page="equipos">Equipos</button>
+<button class="nav" data-page="editar">⚙️ Editar</button>
+</nav>
+<div class="wrap">
+<section id="inicio" class="page active">
+ <div class="title">🔴 En vivo</div><div id="live"></div>
+ <div class="title">📅 Próximos partidos</div><div id="next"></div>
+ <div class="title">🏆 Posiciones</div><div class="card" id="miniTable"></div>
+</section>
+<section id="partidos" class="page">
+ <div class="title">Partidos</div><div class="tabs"><span class="pill sel">Todos</span><span class="pill">Hoy</span><span class="pill">Próximos</span></div><div id="allMatches"></div>
+</section>
+<section id="tabla" class="page"><div class="title">Tabla de posiciones</div><div class="card" id="fullTable"></div></section>
+<section id="equipos" class="page"><div class="title">Equipos</div><div id="teamList" class="grid"></div></section>
+<section id="editar" class="page">
+ <div class="title">⚙️ Panel de edición</div>
+ <div class="card"><b>Agregar partido</b><div class="grid">
+ <div><label>Local</label><input id="h" placeholder="River Plate"></div><div><label>Visitante</label><input id="a" placeholder="Boca Juniors"></div>
+ <div><label>Hora</label><input id="t" placeholder="21:00"></div><div><label>Marcador</label><input id="s" placeholder="0 - 0"></div>
+ </div><button onclick="add()">Agregar partido</button> <button onclick="restore()">Restaurar ejemplo</button></div>
+ <div id="editList"></div>
+</section>
+</div>
+<script>
+const base={teams:["River Plate","Boca Juniors","Racing Club","Independiente","San Lorenzo","Huracán","Estudiantes","Gimnasia","Rosario Central","Newell's"],
+matches:[
+{h:"River Plate",a:"Boca Juniors",t:"72'",s:"1 - 1",live:true},
+{h:"Racing Club",a:"Independiente",t:"20:30",s:"- - -",live:false},
+{h:"San Lorenzo",a:"Huracán",t:"22:00",s:"- - -",live:false},
+{h:"Estudiantes",a:"Gimnasia",t:"Final",s:"2 - 0",live:false}],
+table:[["River Plate",18,8,17,8],["Boca Juniors",16,8,14,8],["Racing Club",14,8,12,9],["Independiente",12,8,10,9],["San Lorenzo",11,8,9,9]]};
+let d=JSON.parse(localStorage.getItem("argFutbol2"))||base;
+function save(){localStorage.setItem("argFutbol2",JSON.stringify(d));render()}
+function card(m){return `<div class="card match"><div><div class="crest">⚽</div><div class="team">${m.h}</div></div><div><div class="${m.live?'live':''}">${m.live?'● EN VIVO':m.t}</div><div class="score">${m.s}</div></div><div><div class="crest">⚽</div><div class="team">${m.a}</div></div></div>`}
+function table(n){return `<table><tr><th>#</th><th>Equipo</th><th>PTS</th><th>PJ</th><th>DG</th></tr>`+d.table.slice(0,n).map((x,i)=>`<tr><td>${i+1}</td><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]-x[4]}</td></tr>`).join("")+"</table>"}
+function render(){
+ let live=d.matches.filter(x=>x.live), next=d.matches.filter(x=>!x.live);
+ document.getElementById("live").innerHTML=live.length?live.map(card).join(""):'<div class="card muted">No hay partidos en vivo ahora.</div>';
+ document.getElementById("next").innerHTML=next.slice(0,3).map(card).join("");
+ document.getElementById("miniTable").innerHTML=table(5); document.getElementById("fullTable").innerHTML=table(d.table.length);
+ document.getElementById("allMatches").innerHTML=d.matches.map(card).join("");
+ document.getElementById("teamList").innerHTML=d.teams.map(x=>`<div class="card"><div class="crest">⚽</div><b>${x}</b><div class="muted">Ver equipo →</div></div>`).join("");
+ document.getElementById("editList").innerHTML=d.matches.map((m,i)=>`<div class="card"><b>${m.h} - ${m.a}</b><br><span class="muted">${m.t} · ${m.s}</span><br><button onclick="del(${i})">Eliminar</button></div>`).join("");
+}
+function add(){let h=H.value.trim(),a=A.value.trim();if(!h||!a)return alert("Completá los dos equipos.");d.matches.push({h,a,t:T.value||"Próximo",s:S.value||"- - -",live:false});d.teams=[...new Set([...d.teams,h,a])];save();H.value=A.value=T.value=S.value=""}
+function del(i){d.matches.splice(i,1);save()}function restore(){if(confirm("¿Restaurar?")){d=structuredClone(base);save()}}
+const H=document.getElementById("h"),A=document.getElementById("a"),T=document.getElementById("t"),S=document.getElementById("s");
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.page).classList.add("active")});
+render();
+</script>
+</body></html>
